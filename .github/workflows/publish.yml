@@ -1,36 +1,299 @@
-# This is a basic workflow to help you get started with Actions
+---
+title: "Lauren's Final Project Attempt"
+format: html
+editor: visual
+---
 
-name: CI
+## Project Code
 
-# Controls when the workflow will run
-on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+```{r}
+Sys.setenv(PATH = paste(Sys.getenv("PATH"), "C:/Program Files/nodejs", sep = ";"))
+```
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+```{r}
+system("C:/Program Files/nodejs/node -v")
+```
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
-jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+```{r}
+system("C:/Program Files/nodejs/npm install -g quarto-cli")
+```
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+```{r}
+# Specify the full path to the "Quarto Website" directory
+quarto_website_directory <- "C:/Users/C25Lauren.Arnold/OneDrive - afacademy.af.edu/Documents/Quarto Website"
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+# Create the "Quarto Website" directory if it doesn't exist
+dir.create(quarto_website_directory, recursive = TRUE, showWarnings = FALSE)
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+# Create a default quarto.yml configuration file in the directory
+quarto_yml_content <- "
+output:
+  quarto::bookdown_site: true
+"
+writeLines(quarto_yml_content, file.path(quarto_website_directory, "quarto.yml"))
+
+# Inform the user
+cat("Quarto project initialized in the 'Quarto Website' directory.\n")
+```
+
+```{r}
+# Navigate to your Quarto website project directory
+setwd("C:/Users/C25Lauren.Arnold/OneDrive - afacademy.af.edu/Documents/Quarto Website")
+
+# Create Python virtual environment
+system("python -m venv .venv")
+```
+
+```{r}
+# Specify the full path to the R library directory
+r_library_path <- "C:/Users/C25Lauren.Arnold/OneDrive - afacademy.af.edu/Documents/Quarto Website/.Rlibrary"
+
+# Create .Rprofile file if it doesn't exist and add library path configuration
+if (!file.exists(".Rprofile")) {
+  cat(paste(".libPaths(\"", r_library_path, "\")"), file = ".Rprofile")
+} else {
+  cat(paste("\n.libPaths(\"", r_library_path, "\")"), file = ".Rprofile", append = TRUE)
+}
+
+# Create .Rlibrary directory if it doesn't exist
+if (!dir.exists(r_library_path)) {
+  dir.create(r_library_path)
+}
+```
+
+```{r}
+# Specify the full path to the virtual environment directory
+venv_path <- "C:/Users/C25Lauren.Arnold/OneDrive - afacademy.af.edu/Documents/Quarto Website/.venv"
+
+# Activate Python virtual environment
+if (Sys.info()["sysname"] == "Windows") {
+  system(paste(shQuote(file.path(venv_path, "Scripts", "activate.bat"))))
+} else {
+  system(paste("source", shQuote(file.path(venv_path, "bin", "activate"))))
+}
+```
+
+```{r}
+install.packages("renv")
+renv::init()
+
+install.packages("palmerpenguins")
+install.packages("dplyr")
+install.packages("ggplot2")
+
+install.packages("DBI")
+library(DBI)
+
+install.packages("duckdb")
+library(duckdb)
+
+install.packages("dbplyr")
+install.packages("magrittr")
+library(magrittr)
+install.packages("shiny")
+library(shiny)
+#install.packages("devtools")
+#devtools::install_github("r-hub/vetiver")
+```
+
+```{r}
+## Penguin Size and Mass by Sex and Species
+
+library(palmerpenguins)
+library(dplyr)
+library(ggplot2)
+
+df <- palmerpenguins::penguins
+
+summary_stats <- df %>%
+  group_by(species, sex) %>%
+  summarise(
+    across(
+      where(is.numeric), 
+      function(x) mean(x, na.rm = TRUE)
+    )
+  )
+
+knitr::kable(summary_stats)
+```
+
+```{r}
+ggplot(df, aes(x = bill_length_mm, y = body_mass_g, color = species)) +
+  geom_point() + 
+  geom_smooth(method = "lm")
+```
+
+```{r}
+renv::snapshot()
+```
+
+```{r}
+install.packages("reticulate")
+library(reticulate)
+
+use_virtualenv(venv_path)
+```
+
+```{r}
+# Python Code Begins
+reticulate::py_install("palmerpenguins")
+reticulate::py_install("pandas")
+reticulate::py_install("numpy")
+reticulate::py_install("scikit-learn")
+reticulate::py_install('vetiver')
+reticulate::py_install('numpy')
+reticulate::py_install('duckdb')
+reticulate::py_install('shiny')
+reticulate::py_install('requests')
+reticulate::py_install('pins')
+```
+
+```{python}
+from palmerpenguins import penguins
+from pandas import get_dummies
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn import preprocessing
+import duckdb
+```
+
+```{python}
+con = duckdb.connect('my-db.duckdb')
+df = penguins.load_penguins()
+con.register('df', df)
+con.execute('CREATE TABLE penguins AS SELECT * FROM df')
+con.close()
+
+con = duckdb.connect('my-db.duckdb')
+df = con.execute("SELECT * FROM penguins").fetchdf().dropna()
+con.close()
+
+df.head(3)
+```
+
+```{python}
+X = get_dummies(df[['bill_length_mm', 'species', 'sex']], drop_first=True)
+y = df['body_mass_g']
+
+X_dropped = X.dropna()
+y_dropped = y[X.index.isin(X_dropped.index)]
+
+model = LinearRegression().fit(X_dropped, y_dropped)
+```
+
+```{python}
+print(f"R^2 {model.score(X,y)}")
+print(f"Intercept {model.intercept_}")
+print(f"Columns {X.columns}")
+print(f"Coefficients {model.coef_}")
+```
+
+```{r}
+# Load reticulate package
+library(reticulate)
+
+# Specify the full path to the virtual environment directory
+venv_path <- "C:/Users/C25Lauren.Arnold/OneDrive - afacademy.af.edu/Documents/Quarto Website/.venv"
+
+# Activate Python virtual environment
+if (Sys.info()["sysname"] == "Windows") {
+  system(paste(shQuote(file.path(venv_path, "Scripts", "activate.bat"))))
+} else {
+  system(paste("source", shQuote(file.path(venv_path, "bin", "activate"))))
+}
+
+# Now you can use reticulate to execute Python code
+py <- import("pins")
+py$board_folder("Quarto Website/model", allow_pickle_read=TRUE)
+```
+
+```{r}
+library(pins)
+
+# Specify the board folder path
+board_folder_path <- board_folder("Quarto Website/model")
+
+# Activate the Python environment
+use_virtualenv("C:/Users/C25Lauren.Arnold/OneDrive - afacademy.af.edu/Documents/Quarto Website/.venv")
+
+# Load the necessary Python modules
+vetiver <- import("vetiver")
+
+# Load the model
+v <- vetiver$VetiverModel$from_pin(board_folder_path, "penguin_model", version="0x000001BF23835BD0")
+```
+
+```{r}
+library(shiny)
+
+api_url <- "http://127.0.0.1:8080/predict"
+
+ui <- fluidPage(
+  titlePanel("Penguin Mass Predictor"),
+
+  # Model input values
+  sidebarLayout(
+    sidebarPanel(
+      sliderInput(
+        "bill_length",
+        "Bill Length (mm)",
+        min = 30,
+        max = 60,
+        value = 45,
+        step = 0.1
+      ),
+      selectInput(
+        "sex",
+        "Sex",
+        c("Male", "Female")
+      ),
+      selectInput(
+        "species",
+        "Species",
+        c("Adelie", "Chinstrap", "Gentoo")
+      ),
+      # Get model predictions
+      actionButton(
+        "predict",
+        "Predict"
+      )
+    ),
+
+    mainPanel(
+      h2("Penguin Parameters"),
+      verbatimTextOutput("vals"),
+      h2("Predicted Penguin Mass (g)"),
+      textOutput("pred")
+    )
+  )
+)
+
+server <- function(input, output) {
+  # Input params
+  vals <- reactive(
+    list(
+      bill_length_mm = input$bill_length,
+      species_Chinstrap = input$species == "Chinstrap",
+      species_Gentoo = input$species == "Gentoo",
+      sex_male = input$sex == "Male"
+    )
+  )
+
+  # Fetch prediction from API
+  pred <- eventReactive(
+    input$predict,
+    httr2::request(api_url) |>
+      httr2::req_body_json(vals()) |>
+      httr2::req_perform() |>
+      httr2::resp_body_json(),
+    ignoreInit = TRUE
+  )
+
+  # Render to UI
+  output$pred <- renderText(pred()$predict[[1]])
+  output$vals <- renderPrint(vals())
+}
+
+# Run the application
+shinyApp(ui = ui, server = server)
+```
